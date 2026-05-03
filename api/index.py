@@ -1,8 +1,5 @@
 from fastapi import FastAPI
 from playwright.sync_api import sync_playwright
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import quote
 
 app = FastAPI()
 
@@ -11,24 +8,41 @@ app = FastAPI()
 def home():
     return {"message": "Google Search API Running"}
 
-
 @app.get("/search")
 def search(q: str):
-    url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(q)}"
+    summary = ""
 
-    response = requests.get(url)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+        headless=True,
+        args=["--no-sandbox", "--disable-setuid-sandbox"])
+        page = browser.new_page()
 
-    if response.status_code != 200:
-        return {
+        page.goto("https://www.wikipedia.org/")
+        page.fill('input[name="search"]', q)
+        page.keyboard.press("Enter")
+
+        page.wait_for_timeout(3000)
+
+        title_el = page.query_selector("h1")
+
+        paragraphs = page.query_selector_all(
+            "#mw-content-text p"
+        )
+
+        for para in paragraphs:
+            text = para.inner_text().strip()
+
+            if len(text) > 50:
+                summary = text
+                break
+
+        result = {
             "query": q,
-            "title": "",
-            "summary": "No result found"
+            "title": title_el.inner_text().strip() if title_el else "",
+            "summary": summary
         }
 
-    data = response.json()
+        browser.close()
 
-    return {
-        "query": q,
-        "title": data.get("title", ""),
-        "summary": data.get("extract", "")
-    }
+    return result
