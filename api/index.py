@@ -15,7 +15,11 @@ def search(q: str):
     with sync_playwright() as p:
         browser = p.chromium.launch(
         headless=True,
-        args=["--no-sandbox", "--disable-setuid-sandbox"])
+        args=[
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage"
+        ])
         page = browser.new_page()
 
         page.goto("https://www.wikipedia.org/")
