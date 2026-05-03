@@ -14,24 +14,21 @@ def home():
 
 @app.get("/search")
 def search(q: str):
-    search_url = f"https://en.wikipedia.org/w/index.php?search={quote(q)}"
+    url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(q)}"
 
-    response = requests.get(search_url)
-    soup = BeautifulSoup(response.text, "html.parser")
+    response = requests.get(url)
 
-    title = soup.find("h1")
-    paragraphs = soup.find_all("p")
+    if response.status_code != 200:
+        return {
+            "query": q,
+            "title": "",
+            "summary": "No result found"
+        }
 
-    summary = ""
-
-    for p in paragraphs:
-        text = p.get_text().strip()
-        if len(text) > 60:
-            summary = text
-            break
+    data = response.json()
 
     return {
         "query": q,
-        "title": title.get_text().strip() if title else "",
-        "summary": summary
+        "title": data.get("title", ""),
+        "summary": data.get("extract", "")
     }
